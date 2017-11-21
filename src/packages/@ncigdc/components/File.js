@@ -27,6 +27,7 @@ import DownloadFile from '@ncigdc/components/DownloadFile';
 import { visualizingButton } from '@ncigdc/theme/mixins';
 import { RepositoryFilesLink } from '@ncigdc/components/Links/RepositoryLink';
 import SampleType from '@ncigdc/modern_components/SampleType';
+import AssociatedEntitiesTable from '@ncigdc/modern_components/AssociatedEntitiesTable';
 import { makeFilter } from '@ncigdc/utils/filters';
 import LocalPaginationTable from '@ncigdc/components/LocalPaginationTable';
 import withRouter from '@ncigdc/utils/withRouter';
@@ -310,6 +311,7 @@ const File = ({
           ]}
         />
       </LocalPaginationTable>
+      <AssociatedEntitiesTable fileId={node.file_id} />
 
       {displaySection('analysis', node.data_category) && (
         <Row style={{ paddingTop: '2rem', alignItems: 'flex-start' }}>
