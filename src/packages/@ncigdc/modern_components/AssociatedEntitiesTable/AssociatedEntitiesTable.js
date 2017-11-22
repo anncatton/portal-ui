@@ -11,47 +11,14 @@ import SearchIcon from 'react-icons/lib/fa/search';
 import Showing from '@ncigdc/components/Pagination/Showing';
 import Pagination from '@ncigdc/components/Pagination';
 import SampleType from '@ncigdc/modern_components/SampleType';
+import FileAnnotations from '@ncigdc/modern_components/FileAnnotations';
 import CaseLink from '@ncigdc/components/Links/CaseLink';
-import AnnotationsLink from '@ncigdc/components/Links/AnnotationsLink';
-import AnnotationLink from '@ncigdc/components/Links/AnnotationLink';
-import {
-  makeFilter,
-  removeFilter,
-  getFilterValue,
-} from '@ncigdc/utils/filters';
+import { removeFilter, getFilterValue } from '@ncigdc/utils/filters';
 import Input from '@ncigdc/uikit/Form/Input';
 import { withRouter } from 'react-router-dom';
 import { parseFilterParam } from '@ncigdc/utils/uri';
 import { GoLink } from '@ncigdc/components/Aggregations';
 import CloseIcon from '@ncigdc/theme/icons/CloseIcon';
-
-const getAnnotationsCount = (annotations, entity) => {
-  const filteredAnnotations = annotations.hits.edges.filter(
-    ({ node: a }) => a.entity_id === entity.entity_id,
-  );
-
-  if (filteredAnnotations.length === 1) {
-    return (
-      <AnnotationLink uuid={filteredAnnotations[0].node.annotation_id}>
-        {filteredAnnotations.length}
-      </AnnotationLink>
-    );
-  } else if (filteredAnnotations.length > 1) {
-    return (
-      <AnnotationsLink
-        query={{
-          filters: makeFilter([
-            { field: 'annotations.entity_id', value: entity.entity_id },
-          ]),
-        }}
-      >
-        {filteredAnnotations.length}
-      </AnnotationsLink>
-    );
-  }
-
-  return filteredAnnotations.length.toLocaleString();
-};
 
 export default compose(
   withRouter,
@@ -86,7 +53,6 @@ export default compose(
     history: { push },
     filters,
   }) => {
-    const annotations = get(repository, 'files.hits.edges[0].node.annotations');
     const ae = get(
       repository,
       'files.hits.edges[0].node.associated_entities.hits.edges',
@@ -110,7 +76,7 @@ export default compose(
       ) : (
         '--'
       ),
-      annotation_count: getAnnotationsCount(annotations, ae),
+      annotation_count: <FileAnnotations entityId={ae.entity_id} />,
     }));
 
     const total = get(
@@ -198,7 +164,7 @@ export default compose(
                 )}
               </Row>
               <GoLink
-                merge="toggle"
+                merge="replace"
                 style={{ padding: '0 5px', fontSize: '14px' }}
                 query={{
                   filters: {
