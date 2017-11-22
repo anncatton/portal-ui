@@ -1,9 +1,9 @@
 import React from 'react';
 import { graphql } from 'react-relay';
 import { compose, withPropsOnChange } from 'recompose';
+import { parse } from 'query-string';
 
 import { parseIntParam, parseFilterParam } from '@ncigdc/utils/uri';
-import { parse } from 'query-string';
 import { makeFilter } from '@ncigdc/utils/filters';
 import { withRouter } from 'react-router-dom';
 import Query from '@ncigdc/modern_components/Query';
@@ -28,10 +28,7 @@ export default (Component: ReactClass<*>) =>
                 value: fileId,
               },
             ]),
-            aeTable_filters: parseFilterParam(
-              q.aeTable_filters,
-              defaultFilters,
-            ),
+            aeTable_filters: parseFilterParam(q.filters, defaultFilters),
             aeTable_offset: parseIntParam(q.aeTable_offset, 0),
             aeTable_size: parseIntParam(q.aeTable_size, defaultSize),
           },
