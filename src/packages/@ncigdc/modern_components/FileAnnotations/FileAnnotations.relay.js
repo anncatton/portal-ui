@@ -36,7 +36,7 @@ export default (Component: ReactClass<*>) =>
                   edges {
                     node {
                       annotations {
-                        hits(filters: $filters, first: 99) {
+                        hits(filters: $filters, first: 1) {
                           total
                           edges {
                             node {

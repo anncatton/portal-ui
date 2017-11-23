@@ -1,3 +1,4 @@
+/* flow */
 import React from 'react';
 import { get } from 'lodash';
 
@@ -6,18 +7,24 @@ import AnnotationsLink from '@ncigdc/components/Links/AnnotationsLink';
 import AnnotationLink from '@ncigdc/components/Links/AnnotationLink';
 import { makeFilter } from '@ncigdc/utils/filters';
 
-const getAnnotationsCount = hits => {
-  const annotations = hits.edges;
-  if (annotations.length === 0) {
+const getLink = (hits: {
+  edges: Array<{ node: { annotation_id: string, entity_id: string } }>,
+  total: number,
+}) => {
+  const { total, edges: annotations } = hits;
+
+  if (total === 0) {
     return 0;
   }
-  if (annotations.length === 1) {
+
+  if (total === 1) {
     return (
       <AnnotationLink uuid={annotations[0].node.annotation_id}>
-        {hits.total}
+        {total}
       </AnnotationLink>
     );
   }
+
   return (
     <AnnotationsLink
       query={{
@@ -29,7 +36,7 @@ const getAnnotationsCount = hits => {
         ]),
       }}
     >
-      {hits.total}
+      {total}
     </AnnotationsLink>
   );
 };
@@ -38,9 +45,10 @@ export default ({ repository, loading }) =>
   loading ? (
     <GreyBox />
   ) : (
-    getAnnotationsCount(
+    getLink(
       get(repository, 'files.hits.edges[0].node.annotations.hits', {
         edges: [],
+        total: 0,
       }),
     )
   );

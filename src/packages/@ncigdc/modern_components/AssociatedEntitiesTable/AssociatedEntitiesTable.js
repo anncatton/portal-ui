@@ -168,7 +168,7 @@ export default compose(
                 style={{ padding: '0 5px', fontSize: '14px' }}
                 query={{
                   filters: {
-                    op: 'and',
+                    op: 'and', //OR doesn't seem to work, just returns everything
                     content: [
                       {
                         op: '=',
