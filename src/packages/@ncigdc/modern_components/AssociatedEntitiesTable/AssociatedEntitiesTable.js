@@ -1,6 +1,6 @@
 import React from 'react';
 import { compose, withState, withPropsOnChange } from 'recompose';
-import { get } from 'lodash';
+import { get, debounce } from 'lodash';
 import { parse } from 'query-string';
 
 import EntityPageHorizontalTable from '@ncigdc/components/EntityPageHorizontalTable';
@@ -13,31 +13,77 @@ import Pagination from '@ncigdc/components/Pagination';
 import SampleType from '@ncigdc/modern_components/SampleType';
 import FileAnnotations from '@ncigdc/modern_components/FileAnnotations';
 import CaseLink from '@ncigdc/components/Links/CaseLink';
-import { removeFilter, getFilterValue } from '@ncigdc/utils/filters';
+import Dropdown from '@ncigdc/uikit/Dropdown';
+import DropdownItem from '@ncigdc/uikit/DropdownItem';
+import DownCaretIcon from 'react-icons/lib/fa/caret-down';
+import { replaceFilters, removeFilter } from '@ncigdc/utils/filters';
 import Input from '@ncigdc/uikit/Form/Input';
-import { withRouter } from 'react-router-dom';
-import { parseFilterParam } from '@ncigdc/utils/uri';
-import { GoLink } from '@ncigdc/components/Aggregations';
+import withRouter from '@ncigdc/utils/withRouter';
+import { parseFilterParam, stringifyJSONParam } from '@ncigdc/utils/uri';
 import CloseIcon from '@ncigdc/theme/icons/CloseIcon';
+
+const pushFilters = debounce((field, value, filters, push) => {
+  const newFilters = value
+    ? replaceFilters(
+        {
+          op: 'and',
+          content: [
+            {
+              op: 'in',
+              content: {
+                field: field,
+                value: [value],
+              },
+            },
+          ],
+        },
+        filters,
+      )
+    : removeFilter(field, filters);
+  push({
+    query: {
+      filters: stringifyJSONParam(newFilters),
+    },
+  });
+}, 700);
+
+const fieldToDisplayName = {
+  'files.associated_entities.entity_submitter_id': 'Entity ID',
+  'files.associated_entities.case_id': 'Case UUID',
+};
 
 export default compose(
   withRouter,
   withTheme,
   withState('searchValue', 'setSearchValue', ''),
+  withState(
+    'searchField',
+    'setSearchField',
+    'files.associated_entities.entity_submitter_id',
+  ),
   withPropsOnChange(
     ['location'],
-    ({ location: { search }, searchValue, setSearchValue }) => {
+    ({ location: { search }, searchValue, setSearchValue, setSearchField }) => {
       const q = parse(search);
       const filters = parseFilterParam(q.filters, { content: [] });
       const aeTableFilters = filters.content;
+      console.log(aeTableFilters);
 
-      const currentValues = getFilterValue({
-        currentFilters: aeTableFilters,
-        dotField: 'files.associated_entities.entity_submitter_id',
-      }) || { content: { value: [] } };
+      const fieldsToValues = aeTableFilters.reduce(
+        (acc, f) => ({
+          ...acc,
+          [f.content.field]: f.content.value,
+        }),
+        {},
+      );
+      console.log(fieldsToValues);
+      if (Object.keys(fieldsToValues).length) {
+        const currentField = Object.keys(fieldsToValues)[0];
+        const currentValue = fieldsToValues[currentField];
+        setSearchField(currentField);
+        setSearchValue(currentValue);
+      }
 
-      const currentValue = currentValues.content.value;
-      setSearchValue(currentValue);
       return {
         filters,
       };
@@ -45,12 +91,15 @@ export default compose(
   ),
 )(
   ({
+    push,
+    history,
     parentVariables,
     repository,
     theme,
     searchValue,
     setSearchValue,
-    history: { push },
+    searchField,
+    setSearchField,
     filters,
   }) => {
     const ae = get(
@@ -126,6 +175,34 @@ export default compose(
                 </div>
                 <Hidden>filter cases</Hidden>
               </label>
+              <Dropdown
+                style={{
+                  borderTop: `1px solid ${theme.greyScale5}`,
+                  borderLeft: 0,
+                  borderBottom: `1px solid ${theme.greyScale5}`,
+                  borderRight: 0,
+                  fontSize: '14px',
+                  padding: 0,
+                }}
+                button={
+                  <Row style={{ padding: '0 4px 0 4px', marginBottom: '-1px' }}>
+                    {fieldToDisplayName[searchField]}
+                    <span style={{ paddingLeft: '4px' }}>
+                      <DownCaretIcon />
+                    </span>
+                  </Row>
+                }
+              >
+                {Object.keys(fieldToDisplayName).map(field => (
+                  <DropdownItem
+                    onClick={() => setSearchField(field)}
+                    aria-label={fieldToDisplayName[field]}
+                  >
+                    {fieldToDisplayName[field]}
+                  </DropdownItem>
+                ))}
+              </Dropdown>
+
               <Row>
                 <Input
                   value={searchValue}
@@ -134,13 +211,15 @@ export default compose(
                     paddingLeft: '1rem',
                     border: `1px solid ${theme.greyScale5}`,
                     width: '28rem',
-                    borderRadius: 0,
+                    borderRadius: '0 4px 4px 0',
                   }}
                   placeholder="eg. TCGA-13*, *13*, *09"
-                  onChange={e => setSearchValue(e.target.value)}
+                  onChange={e => {
+                    setSearchValue(e.target.value);
+                    pushFilters(searchField, e.target.value, filters, push);
+                  }}
                   type="text"
                 />
-
                 {!!searchValue.length && (
                   <CloseIcon
                     style={{
@@ -154,49 +233,17 @@ export default compose(
                     onClick={() => {
                       setSearchValue('');
                       push({
-                        query: removeFilter(
-                          'files.associated_entities.entity_submitter_id',
-                          filters,
-                        ),
+                        query: removeFilter(searchField, filters),
                       });
                     }}
                   />
                 )}
               </Row>
-              <GoLink
-                merge="replace"
-                style={{ padding: '0 5px', fontSize: '14px' }}
-                query={{
-                  filters: {
-                    op: 'and', //OR doesn't seem to work, just returns everything
-                    content: [
-                      {
-                        op: '=',
-                        content: {
-                          field:
-                            'files.associated_entities.entity_submitter_id',
-                          value: searchValue,
-                        },
-                      },
-                      //{
-                      //op: '=',
-                      //content: {
-                      //field: 'files.associated_entities.case_id',
-                      //value: searchValue,
-                      //},
-                      //},
-                    ],
-                  },
-                }}
-                dark={!!searchValue}
-                onClick={() => setSearchValue('')}
-              >
-                Go!
-              </GoLink>
             </Row>
           }
           title="Associated Cases/Biospecimen"
           emptyMessage="No cases or biospecimen found."
+          emptyMessageStyle={{ background: '#fff' }}
           headings={[
             { key: 'entity_submitter_id', title: 'Entity ID' },
             { key: 'entity_type', title: 'Entity Type' },
