@@ -28,7 +28,7 @@ export default (Component: ReactClass<*>) =>
                 value: fileId,
               },
             ]),
-            aeTable_filters: parseFilterParam(q.filters, defaultFilters),
+            aeTable_filters: parseFilterParam(q.aeFilters, defaultFilters),
             aeTable_offset: parseIntParam(q.aeTable_offset, 0),
             aeTable_size: parseIntParam(q.aeTable_size, defaultSize),
           },

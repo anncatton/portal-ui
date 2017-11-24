@@ -1,6 +1,6 @@
 import React from 'react';
 import { compose, withState, withPropsOnChange } from 'recompose';
-import { get, debounce } from 'lodash';
+import { get, debounce, trim } from 'lodash';
 import { parse } from 'query-string';
 
 import EntityPageHorizontalTable from '@ncigdc/components/EntityPageHorizontalTable';
@@ -16,13 +16,17 @@ import CaseLink from '@ncigdc/components/Links/CaseLink';
 import Dropdown from '@ncigdc/uikit/Dropdown';
 import DropdownItem from '@ncigdc/uikit/DropdownItem';
 import DownCaretIcon from 'react-icons/lib/fa/caret-down';
-import { replaceFilters, removeFilter } from '@ncigdc/utils/filters';
+import {
+  replaceFilters,
+  removeFilter,
+  makeFilter,
+} from '@ncigdc/utils/filters';
 import Input from '@ncigdc/uikit/Form/Input';
 import withRouter from '@ncigdc/utils/withRouter';
 import { parseFilterParam, stringifyJSONParam } from '@ncigdc/utils/uri';
 import CloseIcon from '@ncigdc/theme/icons/CloseIcon';
 
-const pushFilters = debounce((field, value, filters, push) => {
+const debouncedPush = debounce((field, value, filters, push) => {
   const newFilters = value
     ? replaceFilters(
         {
@@ -42,14 +46,20 @@ const pushFilters = debounce((field, value, filters, push) => {
     : removeFilter(field, filters);
   push({
     query: {
-      filters: stringifyJSONParam(newFilters),
+      aeFilters: stringifyJSONParam(newFilters),
     },
   });
 }, 700);
 
-const fieldToDisplayName = {
-  'files.associated_entities.entity_submitter_id': 'Entity ID',
-  'files.associated_entities.case_id': 'Case UUID',
+const fieldToDisplay = {
+  'files.associated_entities.entity_submitter_id': {
+    name: 'Entity ID',
+    placeholder: 'eg. TCGA-13*, *13*, *09',
+  },
+  'files.associated_entities.case_id': {
+    name: 'Case UUID',
+    placeholder: 'eg. 0d5e*, *be58*, 0d5e232d-5aa2-4f6f-be58-ffd5f',
+  },
 };
 
 export default compose(
@@ -65,10 +75,8 @@ export default compose(
     ['location'],
     ({ location: { search }, searchValue, setSearchValue, setSearchField }) => {
       const q = parse(search);
-      const filters = parseFilterParam(q.filters, { content: [] });
-      const aeTableFilters = filters.content;
-      console.log(aeTableFilters);
-
+      const aeFilters = parseFilterParam(q.aeFilters, { content: [] });
+      const aeTableFilters = aeFilters.content;
       const fieldsToValues = aeTableFilters.reduce(
         (acc, f) => ({
           ...acc,
@@ -76,7 +84,6 @@ export default compose(
         }),
         {},
       );
-      console.log(fieldsToValues);
       if (Object.keys(fieldsToValues).length) {
         const currentField = Object.keys(fieldsToValues)[0];
         const currentValue = fieldsToValues[currentField];
@@ -85,7 +92,7 @@ export default compose(
       }
 
       return {
-        filters,
+        aeFilters,
       };
     },
   ),
@@ -100,7 +107,7 @@ export default compose(
     setSearchValue,
     searchField,
     setSearchField,
-    filters,
+    aeFilters,
   }) => {
     const ae = get(
       repository,
@@ -185,20 +192,39 @@ export default compose(
                   padding: 0,
                 }}
                 button={
-                  <Row style={{ padding: '0 4px 0 4px', marginBottom: '-1px' }}>
-                    {fieldToDisplayName[searchField]}
+                  <Row
+                    style={{
+                      padding: '0 4px 0 4px',
+                      marginBottom: '-1px',
+                      width: '90px',
+                      justifyContent: 'space-around',
+                    }}
+                  >
+                    {fieldToDisplay[searchField].name}
                     <span style={{ paddingLeft: '4px' }}>
                       <DownCaretIcon />
                     </span>
                   </Row>
                 }
               >
-                {Object.keys(fieldToDisplayName).map(field => (
+                {Object.keys(fieldToDisplay).map(field => (
                   <DropdownItem
-                    onClick={() => setSearchField(field)}
-                    aria-label={fieldToDisplayName[field]}
+                    key={field}
+                    onClick={() => {
+                      setSearchField(field);
+                      if (searchValue) {
+                        push({
+                          query: {
+                            aeFilters: stringifyJSONParam(
+                              makeFilter([{ field, value: searchValue }]),
+                            ),
+                          },
+                        });
+                      }
+                    }}
+                    aria-label={fieldToDisplay[field].name}
                   >
-                    {fieldToDisplayName[field]}
+                    {fieldToDisplay[field].name}
                   </DropdownItem>
                 ))}
               </Dropdown>
@@ -210,13 +236,14 @@ export default compose(
                     fontSize: '14px',
                     paddingLeft: '1rem',
                     border: `1px solid ${theme.greyScale5}`,
-                    width: '28rem',
+                    width: '35rem',
                     borderRadius: '0 4px 4px 0',
                   }}
-                  placeholder="eg. TCGA-13*, *13*, *09"
+                  placeholder={fieldToDisplay[searchField].placeholder}
                   onChange={e => {
-                    setSearchValue(e.target.value);
-                    pushFilters(searchField, e.target.value, filters, push);
+                    const trimmed = trim(e.target.value);
+                    setSearchValue(trimmed);
+                    debouncedPush(searchField, trimmed, aeFilters, push);
                   }}
                   type="text"
                 />
@@ -233,7 +260,7 @@ export default compose(
                     onClick={() => {
                       setSearchValue('');
                       push({
-                        query: removeFilter(searchField, filters),
+                        query: removeFilter(searchField, aeFilters),
                       });
                     }}
                   />
