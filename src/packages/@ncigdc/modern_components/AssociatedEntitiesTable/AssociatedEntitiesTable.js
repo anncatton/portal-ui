@@ -162,7 +162,7 @@ export default compose(
           data={ae}
           rightComponent={
             <Row>
-              <label htmlFor="filter-cases">
+              <label htmlFor="filter-input">
                 <div
                   style={{
                     borderTop: `1px solid ${theme.greyScale5}`,
@@ -180,7 +180,7 @@ export default compose(
                 >
                   <SearchIcon size={14} />
                 </div>
-                <Hidden>filter cases</Hidden>
+                <Hidden>Filter</Hidden>
               </label>
               <Dropdown
                 style={{
@@ -231,6 +231,7 @@ export default compose(
 
               <Row>
                 <Input
+                  id="filter-input"
                   value={searchValue}
                   style={{
                     fontSize: '14px',
