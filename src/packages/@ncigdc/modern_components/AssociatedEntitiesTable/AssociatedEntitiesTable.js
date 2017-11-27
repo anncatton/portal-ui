@@ -49,7 +49,7 @@ const debouncedPush = debounce((field, value, filters, push) => {
       aeFilters: stringifyJSONParam(newFilters),
     },
   });
-}, 700);
+}, 1000);
 
 const fieldToDisplay = {
   'files.associated_entities.entity_submitter_id': {
@@ -58,7 +58,7 @@ const fieldToDisplay = {
   },
   'files.associated_entities.case_id': {
     name: 'Case UUID',
-    placeholder: 'eg. 0d5e*, *be58*, 0d5e232d-5aa2-4f6f-be58-ffd5f',
+    placeholder: 'eg. 635f5335-b008-428e-b005-615776a6643f',
   },
 };
 
@@ -108,6 +108,7 @@ export default compose(
     searchField,
     setSearchField,
     aeFilters,
+    loading,
   }) => {
     const ae = get(
       repository,
@@ -231,13 +232,14 @@ export default compose(
 
               <Row>
                 <Input
+                  disabled={loading}
                   id="filter-input"
                   value={searchValue}
                   style={{
                     fontSize: '14px',
                     paddingLeft: '1rem',
                     border: `1px solid ${theme.greyScale5}`,
-                    width: '35rem',
+                    width: '31rem',
                     borderRadius: '0 4px 4px 0',
                   }}
                   placeholder={fieldToDisplay[searchField].placeholder}
